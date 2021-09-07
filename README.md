@@ -22,7 +22,10 @@ To download the files:
 test_dl.get()
 ```
 
-You should find a photo of the S-1C booster for the Apollo 11 Saturn V in the destination directory.
+You should find this photo of the S-1C booster for the Apollo 11 Saturn V in the destination directory.
+
+![Image of S-1C](https://ia600205.us.archive.org/32/items/KSC-KSC-69P-168/KSC-69P-168.jpg)
+
 
 <!--
 ## To-do
