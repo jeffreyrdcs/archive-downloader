@@ -1,6 +1,6 @@
 # Archive-downloader
 
-Archive-downloader is a simple downloader for downloading files on achive.org.
+Archive-downloader is a python package for downloading files on archive.org.
 
 
 ## Usage
@@ -11,7 +11,7 @@ To initate, simply use the URL and the destination directory as input.
 ```
 from archive_downloader import ArchiveDownloader
 
-input_url = 'https://archive.org/details/KSC-KSC-69P-168'    # Both /details/ are /download/ are supported
+input_url = 'https://archive.org/details/KSC-KSC-69P-168'    # Both details/ and download/ are supported
 download_directory_path = '~/Desktop/download'
 
 test_dl = ArchiveDownloader(input_url[str], download_directory_path[str])
