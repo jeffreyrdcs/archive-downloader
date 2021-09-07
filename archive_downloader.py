@@ -136,7 +136,7 @@ class ArchiveDownloader:
 # Start of the program
 if __name__ == '__main__':
 
-    test_url = 'https://archive.org/details/KSC-KSC-69P-168'  # S-1C booster for the Apollo 11 Saturn V Photo
+    test_url = 'https://archive.org/details/KSC-KSC-69P-168'  # A photo of the S-1C booster for the Apollo 11 Saturn V rocket
     save_dir = '~/Desktop/download_test'     # Support tilde
 
     testdownload = ArchiveDownloader(test_url, save_dir)
