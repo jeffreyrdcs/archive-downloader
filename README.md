@@ -11,7 +11,9 @@ To initate, simply use the URL and the destination directory as input.
 ```
 from archive_downloader import ArchiveDownloader
 
-input_url = 'https://archive.org/details/KSC-KSC-69P-168'    # Both details/ and download/ are supported
+# Both /details/ and /download/ are supported:
+input_url = 'https://archive.org/details/KSC-KSC-69P-168'
+
 download_directory_path = '~/Desktop/download'
 
 test_dl = ArchiveDownloader(input_url[str], download_directory_path[str])
