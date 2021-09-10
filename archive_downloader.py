@@ -73,10 +73,13 @@ class ArchiveDownloader:
             download_href_list.append(a['href'])
 
         download_href_list = list(filter(lambda h: h[-1] != '/', download_href_list))  # Remove directory href
-        download_href_list = list(filter(lambda h: h[0] != '#', download_href_list)) # Remove page href
+        download_href_list = list(filter(lambda h: h[0] != '#', download_href_list))   # Remove page href
         download_href_list = list(filter(lambda h: h[0] != '/' and
-                                 h[0:8] != 'https://', download_href_list))  # Remove archive.org href
-        download_href_list = list(filter(lambda h: '.' in h, download_href_list)) # only grab files with . extension
+                                    h[0:8] != 'https://', download_href_list))  # Remove archive.org href
+        download_href_list = list(filter(lambda h: '.' in h, download_href_list)) # only grab files with .extension
+
+        download_href_list = list(filter(lambda h: h[0] != '%', download_href_list)) # Remove files begin with %, those could be URL encoded
+        # download_href_list = [unquote(h) if h[0] == '%' else h for h in download_href_list] # If file start with %, could be URL encoded
 
         # Convert it to the full URL (Currently not implemented due to how check_save_dir works)
         # download_href_list = [self.download_url+'/'+h for h in download_href_list]
@@ -112,7 +115,7 @@ class ArchiveDownloader:
         '''
         os.chdir(self.save_dir)
 
-        print(f'Downloading {self.count} files from {self.download_url} ...')
+        print(f'[ArchiveDownloader] Downloading {self.count} files from {self.download_url} ...')
 
         for ind, file in enumerate(self.download_link_list):
             file_full_link = self.download_url +'/'+ file
@@ -126,10 +129,10 @@ class ArchiveDownloader:
 
         if len(check_set) == 0:
             print('\n')
-            print(f'All {self.count} files downloaded from {self.download_url}.\n')
+            print(f'[ArchiveDownloader] All {self.count} files downloaded from {self.download_url}.\n')
         else:
             check_str = ', '.join(list(check_set))
-            print(f"Files still missing: {check_str}")
+            print(f"[ArchiveDownloader] Files still missing: {check_str}")
 
 
 
