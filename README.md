@@ -32,6 +32,10 @@ You should find this photo of the S-1C booster for the Apollo 11 Saturn V rocket
 ## To-do
 
 * Add a configuration option to let the user to download only some of the files in the URL.
+
+
+## Known Issues
+
 * Archive-downloader has some issues dealing with filenames that have Unicode characters. wget will throw an illegal byte sequence error when saving the file. To deal with this, one can change the LC_CTYPE and LANG variables of the shell.
 
 
