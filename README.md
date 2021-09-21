@@ -45,7 +45,7 @@ test_dl.edit_config_file('extension', 'jpg', set_download=True, filename='test_d
 test_dl.get(config_file='test_dl.config')
 ```
 
-Only .jpg will be downloaded.
+Only .jpg files will be downloaded to the specified destination directory.
 
 
 
