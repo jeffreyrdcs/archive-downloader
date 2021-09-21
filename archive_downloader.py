@@ -180,9 +180,12 @@ class ArchiveDownloader:
                     config_df.loc[config_df['extension'] == command,'Download'] = 'Y'
                 else:
                     config_df.loc[config_df['extension'] == command,'Download'] = 'N'
+
+                config_df = config_df.drop('extension', axis=1)
             else:
                 # More critieria available soon.
                 pass
+
 
             self.generate_config_header(filename)
 

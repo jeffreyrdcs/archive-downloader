@@ -31,18 +31,22 @@ You should find this photo of the S-1C booster for the Apollo 11 Saturn V rocket
 
 To download only some of files by file extension, first uses the generate_config_file method to generate a configuration file:
 ```
-test_dl.generate_config_file(filename='test_dl.config')     # Default filename is archive_downloader.config
+test_dl.generate_config_file(filename='test_dl.config')
+# Default filename is archive_downloader.config
 ```
 
 This will generate a config file listing all the files to be downloaded. The default is not to download any files ('N').
-This can be changed by setting default_download=True.
+This can be changed by setting default_download=True above.
 
-To select files by their extension and download:
+To select files by their file extension and download them:
 
 ```
 test_dl.edit_config_file('extension', 'jpg', set_download=True, filename='test_dl.config')
 test_dl.get(config_file='test_dl.config')
 ```
+
+Only .jpg will be downloaded.
+
 
 
 ## To-do
