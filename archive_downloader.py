@@ -2,6 +2,7 @@ import os
 import sys
 import requests
 import bs4
+import pandas as pd
 from urllib.parse import unquote
 
 
@@ -78,7 +79,7 @@ class ArchiveDownloader:
                                     h[0:8] != 'https://', download_href_list))  # Remove archive.org href
         download_href_list = list(filter(lambda h: '.' in h, download_href_list)) # only grab files with .extension
 
-        download_href_list = list(filter(lambda h: h[0] != '%', download_href_list)) # Remove files begin with %, those could be URL encoded
+        # download_href_list = list(filter(lambda h: h[0] != '%', download_href_list)) # Remove files begin with %, those could be URL encoded
         # download_href_list = [unquote(h) if h[0] == '%' else h for h in download_href_list] # If file start with %, could be URL encoded
 
         # Convert it to the full URL (Currently not implemented due to how check_save_dir works)
@@ -108,12 +109,104 @@ class ArchiveDownloader:
         return set(download_list_unquote).symmetric_difference(set(in_save_list))
 
 
-    def get(self):
+    def generate_config_header(self, filename):
+        ''' Write the header of the config file. Overwrite existing file '''
+        with open(filename, 'w') as f:
+            f.write("=" * 80+'\n')
+            f.write("    ArchiveDownloader Configuration File"+'\n')
+            f.write("=" * 80+'\n')
+
+
+    def generate_config_file(self, default_download=False, filename='archive_downloader.config'):
+        '''
+        Generate a config file based on the download link list. Write the config file to the save dir.
+        Also return a pd dataframe of the config file (currently removed)
+        '''
+        os.chdir(self.save_dir)
+
+        if default_download:
+            dl_option_list = ['Y'] * len(self.download_link_list)
+        else:
+            dl_option_list = ['N'] * len(self.download_link_list)
+
+        config_df = pd.DataFrame(zip(self.download_link_list, dl_option_list), columns=['File','Download'], index=list(range(1,self.count+1)))
+
+        self.generate_config_header(filename)
+
+        config_df.to_csv(filename, mode='a', sep='\t', index=True)
+        print(f"[ArchiveDownloader] Generated config file {filename} to {self.save_dir}")
+        # return config_df
+
+
+    def process_config_file(self, filename='archive_downloader.config'):
+        '''
+        Read an input config file and modify the download link list and count accordingly.
+        Return a boolean status flag.
+        '''
+        try:
+            config_df = pd.read_csv(self.save_dir+'/'+filename, sep='\t', skiprows=3, index_col=0)
+
+            # Check if the download link list is a subset of the config file
+            if set(self.download_link_list).issubset(set(config_df['File'])):
+                # Check if config_df is all Y
+                if sum(config_df['Download'] == 'N') == 0:
+                    return True
+
+                for (i, file) in config_df[config_df['Download'] == 'N'].iterrows():
+                    if file['File'] in self.download_link_list:
+                        self.download_link_list.remove(file['File'])
+
+                self.count = len(self.download_link_list)
+                return True
+
+        except OSError:
+            print("[ArchiveDownloader] Could not open config file")
+            return False
+
+
+    def edit_config_file(self, criteria, command, set_download=True, filename='archive_downloader.config'):
+        '''
+        Edit the config file according to some criteria. Currently implemented:
+        criteria=extension - select files with certain extension and set download to Y or N
+        '''
+        try:
+            config_df = pd.read_csv(self.save_dir+'/'+filename, sep='\t', skiprows=3, index_col=0)
+
+            if criteria == 'extension':
+                # Extract all the file extension
+                config_df['extension'] = config_df['File'].apply(lambda x: x.split('.')[-1])
+
+                if set_download:
+                    config_df.loc[config_df['extension'] == command,'Download'] = 'Y'
+                else:
+                    config_df.loc[config_df['extension'] == command,'Download'] = 'N'
+            else:
+                # More critieria available soon.
+                pass
+
+            self.generate_config_header(filename)
+
+            config_df.to_csv(self.save_dir+'/'+filename, mode='a', sep='\t', index=True)
+
+        except OSError:
+            print("[ArchiveDownloader] Could not open config file")
+            return False
+
+
+    def get(self, config_file=None):
         '''
         Download the files from the list using wget. Let wget to handle all the incomplete files
         with the -continue and -N flag.
+        If config_file is provided, will only download files with download set to Y.
         '''
         os.chdir(self.save_dir)
+
+        if config_file != None:
+            if self.process_config_file(config_file):
+                print(f'[ArchiveDownloader] Successfully process config file {config_file}')
+            else:
+                print(f'[ArchiveDownloader] Skipping config file {config_file}')
+
 
         print(f'[ArchiveDownloader] Downloading {self.count} files from {self.download_url} ...')
 
@@ -143,7 +236,12 @@ if __name__ == '__main__':
     save_dir = '~/Desktop/download_test'     # Support tilde
 
     testdownload = ArchiveDownloader(test_url, save_dir)
-    testdownload.get()
+    # testdownload.get()                       # Download all files
+
+    # To download only the .jpg files
+    testdownload.generate_config_file(filename='test.config')
+    testdownload.edit_config_file('extension', 'jpg', set_download=True, filename='test.config')
+    testdownload.get(config_file='test.config')
 
     # import pdb; pdb.set_trace()
 

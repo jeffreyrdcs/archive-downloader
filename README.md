@@ -19,7 +19,7 @@ download_directory_path = '~/Desktop/download'  # Str
 test_dl = ArchiveDownloader(input_url, download_directory_path)
 ```
 
-To download the files:
+To download all the files:
 ```
 test_dl.get()
 ```
@@ -29,9 +29,25 @@ You should find this photo of the S-1C booster for the Apollo 11 Saturn V rocket
 <img src="https://ia600205.us.archive.org/32/items/KSC-KSC-69P-168/KSC-69P-168.jpg" width="400">
 
 
+To download only some of files by file extension, first uses the generate_config_file method to generate a configuration file:
+```
+test_dl.generate_config_file(filename='test_dl.config')     # Default filename is archive_downloader.config
+```
+
+This will generate a config file listing all the files to be downloaded. The default is not to download any files ('N').
+This can be changed by setting default_download=True.
+
+To select files by their extension and download:
+
+```
+test_dl.edit_config_file('extension', 'jpg', set_download=True, filename='test_dl.config')
+test_dl.get(config_file='test_dl.config')
+```
+
+
 ## To-do
 
-* Add a configuration option to let the user to download only some of the files in the URL.
+* <del>Add a configuration file option to let the user to download only some of the files in the URL.</del> (Done!)
 
 
 ## Known Issues
