@@ -7,13 +7,13 @@ from urllib.parse import unquote
 
 
 class ArchiveDownloader:
-    '''
+    """
     ArchiveDownloader class.
-    '''
+    """
     def __init__(self, input_url, save_dir, wget_verbose=True):
-        '''
+        """
         Constructor. Take input URL and the directory path for saving the files
-        '''
+        """
         self.download_url = ''
         self.download_link_list = []
         self.count = 0
@@ -37,9 +37,9 @@ class ArchiveDownloader:
 
 
     def check_download_availabilty(self):
-        '''
+        """
         Check if the archive url has a download option
-        '''
+        """
         if 'archive.org' not in self.input_url:
             print('Not a valid archive.org URL!')
             return False
@@ -58,26 +58,30 @@ class ArchiveDownloader:
 
 
     def get_download_list(self):
-        '''
+        """
         Get a list of to-be-downloaded URLs
-        '''
+        """
         dresult = requests.get(self.download_url)
         download_soup = bs4.BeautifulSoup(dresult.text,"lxml")
-
-        download_href_list = []
         download_list = download_soup.find_all('a', href=True)
 
-        # Clean Up the href list
-        for a in download_list:
-            tmp_href = a['href']
+        return self.filter_download_list(download_list)
+
+
+    def filter_download_list(self, download_list):
+        """ Clean up the download list """
+        download_href_list = []
+
+        for item in download_list:
+            tmp_href = item['href']
             # print("Found URL:", tmp_href)
-            download_href_list.append(a['href'])
+            download_href_list.append(item['href'])
 
         download_href_list = list(filter(lambda h: h[-1] != '/', download_href_list))  # Remove directory href
         download_href_list = list(filter(lambda h: h[0] != '#', download_href_list))   # Remove page href
         download_href_list = list(filter(lambda h: h[0] != '/' and
-                                    h[0:8] != 'https://', download_href_list))  # Remove archive.org href
-        download_href_list = list(filter(lambda h: '.' in h, download_href_list)) # only grab files with .extension
+                                    h[0:8] != 'https://', download_href_list))     # Remove archive.org href
+        download_href_list = list(filter(lambda h: '.' in h, download_href_list))  # only grab files with .extension
 
         # download_href_list = list(filter(lambda h: h[0] != '%', download_href_list)) # Remove files begin with %, those could be URL encoded
         # download_href_list = [unquote(h) if h[0] == '%' else h for h in download_href_list] # If file start with %, could be URL encoded
@@ -88,12 +92,12 @@ class ArchiveDownloader:
 
 
     def replace_tilde_path(self, in_save_dir):
-        ''' Replace the ~ symbol to home '''
+        """ Replace the ~ symbol to $HOME env variable """
         return in_save_dir.replace('~', os.getenv('HOME'))
 
 
     def get_save_dir_file_list(self):
-        ''' Get the file list of the save directory '''
+        """ Get the file list of the save directory """
         os.chdir(self.save_dir)
         save_dir_file_list = os.listdir()
         save_dir_file_list = list(filter(lambda h: h[0] != '.', save_dir_file_list))
@@ -102,7 +106,7 @@ class ArchiveDownloader:
 
 
     def compare_save_list_download_list(self):
-        ''' Compare the download_link_list with the file list in the directory '''
+        """ Compare the download_link_list with the file list in the directory """
         in_save_list = self.get_save_dir_file_list()
         download_list_unquote = [unquote(h) for h in self.download_link_list]   # Need to unquote (decode) the URL
 
@@ -110,7 +114,7 @@ class ArchiveDownloader:
 
 
     def generate_config_header(self, filename):
-        ''' Write the header of the config file. Overwrite existing file '''
+        """ Write the header of the config file. Overwrite existing file """
         with open(filename, 'w') as f:
             f.write("=" * 80+'\n')
             f.write("    ArchiveDownloader Configuration File"+'\n')
@@ -118,10 +122,10 @@ class ArchiveDownloader:
 
 
     def generate_config_file(self, default_download=False, filename='archive_downloader.config'):
-        '''
+        """
         Generate a config file based on the download link list. Write the config file to the save dir.
         Also return a pd dataframe of the config file (currently removed)
-        '''
+        """
         os.chdir(self.save_dir)
 
         if default_download:
@@ -139,10 +143,10 @@ class ArchiveDownloader:
 
 
     def process_config_file(self, filename='archive_downloader.config'):
-        '''
+        """
         Read an input config file and modify the download link list and count accordingly.
         Return a boolean status flag.
-        '''
+        """
         try:
             config_df = pd.read_csv(self.save_dir+'/'+filename, sep='\t', skiprows=3, index_col=0)
 
@@ -165,10 +169,10 @@ class ArchiveDownloader:
 
 
     def edit_config_file(self, criteria, command, set_download=True, filename='archive_downloader.config'):
-        '''
+        """
         Edit the config file according to some criteria. Currently implemented:
         criteria=extension - select files with certain extension and set download to Y or N
-        '''
+        """
         try:
             config_df = pd.read_csv(self.save_dir+'/'+filename, sep='\t', skiprows=3, index_col=0)
 
@@ -197,19 +201,18 @@ class ArchiveDownloader:
 
 
     def get(self, config_file=None):
-        '''
+        """
         Download the files from the list using wget. Let wget to handle all the incomplete files
         with the -continue and -N flag.
         If config_file is provided, will only download files with download set to Y.
-        '''
+        """
         os.chdir(self.save_dir)
 
         if config_file != None:
             if self.process_config_file(config_file):
-                print(f'[ArchiveDownloader] Successfully process config file {config_file}')
+                print(f'[ArchiveDownloader] Successfully process config file: {config_file}')
             else:
-                print(f'[ArchiveDownloader] Skipping config file {config_file}')
-
+                print(f'[ArchiveDownloader] Skipping config file: {config_file}')
 
         print(f'[ArchiveDownloader] Downloading {self.count} files from {self.download_url} ...')
 
@@ -228,11 +231,9 @@ class ArchiveDownloader:
             print(f'[ArchiveDownloader] All {self.count} files downloaded from {self.download_url}.\n')
         else:
             check_str = ', '.join(list(check_set))
-            print(f"[ArchiveDownloader] Files still missing: {check_str}")
+            print(f"[ArchiveDownloader] Files that are still missing: {check_str}")
 
 
-
-# Start of the program
 if __name__ == '__main__':
 
     test_url = 'https://archive.org/details/KSC-KSC-69P-168'  # A photo of the S-1C booster for the Apollo 11 Saturn V rocket
