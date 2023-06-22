@@ -2,6 +2,10 @@
 
 Archive-downloader is a python package for downloading files on archive.org. It uses Beautiful Soup 4 and wget to extract links from the HTML and download the files.
 
+## Requirement
+
+This script uses pandas and Beautiful Soup 4. To install the libraries:  
+``` pip install bs4 pandas```
 
 ## Usage
 
