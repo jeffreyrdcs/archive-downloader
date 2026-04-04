@@ -1,9 +1,21 @@
+import argparse
 import os
+import shutil
 import sys
-import requests
-import bs4
-import pandas as pd
 from urllib.parse import unquote
+
+
+def require_dependency(name, import_name=None):
+    """Import a dependency lazily so CLI help still works without the package installed."""
+    module_name = import_name or name
+    try:
+        return __import__(module_name)
+    except ModuleNotFoundError:
+        print(
+            f"Missing dependency: {module_name}. Install project requirements before running this command.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
 
 class ArchiveDownloader:
@@ -19,6 +31,7 @@ class ArchiveDownloader:
         self.count = 0
         self.input_url = input_url
         self.save_dir = self.replace_tilde_path(save_dir)    # Replace ~ in the input path
+        self.ensure_save_dir()
 
         # Verbose flag
         if wget_verbose:
@@ -35,6 +48,10 @@ class ArchiveDownloader:
             print('The URL is not compatible with this downloader.')
             sys.exit(3)
 
+    def ensure_save_dir(self):
+        """Create the save directory when it does not exist."""
+        os.makedirs(self.save_dir, exist_ok=True)
+
 
     def check_download_availabilty(self):
         """
@@ -49,6 +66,8 @@ class ArchiveDownloader:
             return True
 
         # If it is the detail page, look for the download options and download button class
+        requests = require_dependency('requests')
+        bs4 = require_dependency('beautifulsoup4', 'bs4')
         result = requests.get(self.input_url)
         front_soup = bs4.BeautifulSoup(result.text,"lxml")
         first_test = front_soup.select('.item-download-options')
@@ -61,11 +80,17 @@ class ArchiveDownloader:
         """
         Get a list of to-be-downloaded URLs
         """
+        requests = require_dependency('requests')
+        bs4 = require_dependency('beautifulsoup4', 'bs4')
         dresult = requests.get(self.download_url)
         download_soup = bs4.BeautifulSoup(dresult.text,"lxml")
         download_list = download_soup.find_all('a', href=True)
 
         return self.filter_download_list(download_list)
+
+    def list_files(self):
+        """Return the current download list as decoded file names."""
+        return [unquote(item) for item in self.download_link_list]
 
 
     def filter_download_list(self, download_list):
@@ -94,6 +119,15 @@ class ArchiveDownloader:
     def replace_tilde_path(self, in_save_dir):
         """ Replace the ~ symbol to $HOME env variable """
         return in_save_dir.replace('~', os.getenv('HOME'))
+
+    def select_extensions(self, extensions):
+        """Keep only files whose extension matches the requested list."""
+        normalized = {ext.lower().lstrip('.') for ext in extensions}
+        self.download_link_list = [
+            item for item in self.download_link_list
+            if item.split('.')[-1].lower() in normalized
+        ]
+        self.count = len(self.download_link_list)
 
 
     def get_save_dir_file_list(self):
@@ -126,6 +160,7 @@ class ArchiveDownloader:
         Generate a config file based on the download link list. Write the config file to the save dir.
         Also return a pd dataframe of the config file (currently removed)
         """
+        pd = require_dependency('pandas')
         os.chdir(self.save_dir)
 
         if default_download:
@@ -147,6 +182,7 @@ class ArchiveDownloader:
         Read an input config file and modify the download link list and count accordingly.
         Return a boolean status flag.
         """
+        pd = require_dependency('pandas')
         try:
             config_df = pd.read_csv(self.save_dir+'/'+filename, sep='\t', skiprows=3, index_col=0)
 
@@ -173,6 +209,7 @@ class ArchiveDownloader:
         Edit the config file according to some criteria. Currently implemented:
         criteria=extension - select files with certain extension and set download to Y or N
         """
+        pd = require_dependency('pandas')
         try:
             config_df = pd.read_csv(self.save_dir+'/'+filename, sep='\t', skiprows=3, index_col=0)
 
@@ -234,18 +271,116 @@ class ArchiveDownloader:
             print(f"[ArchiveDownloader] Files that are still missing: {check_str}")
 
 
+def build_parser():
+    parser = argparse.ArgumentParser(
+        description='List, configure, and download files from archive.org item pages.'
+    )
+    subparsers = parser.add_subparsers(dest='command', required=True)
+
+    list_parser = subparsers.add_parser('list', help='List downloadable files for an archive.org item.')
+    list_parser.add_argument('url', help='archive.org /details/ or /download/ URL')
+    list_parser.add_argument(
+        '--save-dir',
+        default='.',
+        help='Directory used for initialization. Defaults to the current directory.',
+    )
+
+    config_parser = subparsers.add_parser('config', help='Generate or update a download config file.')
+    config_parser.add_argument('url', help='archive.org /details/ or /download/ URL')
+    config_parser.add_argument('save_dir', help='Directory where files and config will live')
+    config_parser.add_argument(
+        '--config-file',
+        default='archive_downloader.config',
+        help='Name of the config file to create or edit',
+    )
+    config_parser.add_argument(
+        '--default-download',
+        action='store_true',
+        help='Mark every file as selected when generating the config file',
+    )
+    config_parser.add_argument(
+        '--extension',
+        action='append',
+        default=[],
+        help='Mark one or more extensions for download after generating the config file',
+    )
+    config_parser.add_argument(
+        '--exclude-extension',
+        action='append',
+        default=[],
+        help='Mark one or more extensions as not selected in the config file',
+    )
+
+    download_parser = subparsers.add_parser('download', help='Download files from an archive.org item.')
+    download_parser.add_argument('url', help='archive.org /details/ or /download/ URL')
+    download_parser.add_argument('save_dir', help='Directory where files should be downloaded')
+    download_parser.add_argument(
+        '--config-file',
+        help='Use an existing config file to decide which files to download',
+    )
+    download_parser.add_argument(
+        '--extension',
+        action='append',
+        default=[],
+        help='Download only the listed extensions, for example --extension jpg --extension xml',
+    )
+    download_parser.add_argument(
+        '--quiet',
+        action='store_true',
+        help='Use wget non-verbose mode',
+    )
+
+    return parser
+
+
+def run_cli(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.command == 'list':
+        downloader = ArchiveDownloader(args.url, args.save_dir)
+        for index, filename in enumerate(downloader.list_files(), start=1):
+            print(f'{index}. {filename}')
+        return 0
+
+    if shutil.which('wget') is None:
+        print('wget is required and was not found on PATH.', file=sys.stderr)
+        return 2
+
+    if args.command == 'config':
+        downloader = ArchiveDownloader(args.url, args.save_dir)
+        downloader.generate_config_file(
+            default_download=args.default_download,
+            filename=args.config_file,
+        )
+        for extension in args.extension:
+            downloader.edit_config_file(
+                'extension',
+                extension.lstrip('.'),
+                set_download=True,
+                filename=args.config_file,
+            )
+        for extension in args.exclude_extension:
+            downloader.edit_config_file(
+                'extension',
+                extension.lstrip('.'),
+                set_download=False,
+                filename=args.config_file,
+            )
+        print(f'[ArchiveDownloader] Config ready: {args.config_file}')
+        return 0
+
+    if args.command == 'download':
+        downloader = ArchiveDownloader(args.url, args.save_dir, wget_verbose=not args.quiet)
+        if args.extension:
+            downloader.select_extensions(args.extension)
+            print(f'[ArchiveDownloader] Filtered to {downloader.count} files by extension.')
+        downloader.get(config_file=args.config_file)
+        return 0
+
+    parser.print_help()
+    return 1
+
+
 if __name__ == '__main__':
-
-    test_url = 'https://archive.org/details/KSC-KSC-69P-168'  # A photo of the S-1C booster for the Apollo 11 Saturn V rocket
-    save_dir = '~/Desktop/download_test'     # Support tilde
-
-    testdownload = ArchiveDownloader(test_url, save_dir)
-    # testdownload.get()                       # Download all files
-
-    # To download only the .jpg files
-    testdownload.generate_config_file(filename='test.config')
-    testdownload.edit_config_file('extension', 'jpg', set_download=True, filename='test.config')
-    testdownload.get(config_file='test.config')
-
-    # import pdb; pdb.set_trace()
-
+    sys.exit(run_cli())

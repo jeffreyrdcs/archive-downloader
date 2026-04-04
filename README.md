@@ -64,6 +64,44 @@ test_dl.get(config_file='test_dl.config')
 
 Only .jpg files will be downloaded to the specified destination directory.
 
+## CLI
+
+The repository also supports a simple CLI through `archive_downloader.py`.
+
+List downloadable files:
+
+```bash
+python archive_downloader.py list "https://archive.org/details/KSC-KSC-69P-168"
+```
+
+Generate a config file and pre-select one extension:
+
+```bash
+python archive_downloader.py config \
+  "https://archive.org/details/KSC-KSC-69P-168" \
+  ~/Desktop/download \
+  --config-file photos.config \
+  --extension jpg
+```
+
+Download files directly by extension:
+
+```bash
+python archive_downloader.py download \
+  "https://archive.org/details/KSC-KSC-69P-168" \
+  ~/Desktop/download \
+  --extension jpg
+```
+
+Download using an existing config file:
+
+```bash
+python archive_downloader.py download \
+  "https://archive.org/details/KSC-KSC-69P-168" \
+  ~/Desktop/download \
+  --config-file photos.config
+```
+
 ## Project Layout
 
 - `archive_downloader.py`: main downloader implementation
@@ -79,4 +117,3 @@ Only .jpg files will be downloaded to the specified destination directory.
 ## Known Issues
 
 * Archive-downloader has some issues dealing with filenames that have Unicode characters. `wget` can throw an illegal byte sequence error when saving the file. One workaround is to adjust the `LC_CTYPE` and `LANG` variables in the shell.
-
