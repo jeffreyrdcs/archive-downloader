@@ -30,7 +30,7 @@ class ArchiveDownloader:
         self.download_link_list = []
         self.count = 0
         self.input_url = input_url
-        self.save_dir = self.replace_tilde_path(save_dir)    # Replace ~ in the input path
+        self.save_dir = os.path.abspath(self.replace_tilde_path(save_dir))    # Replace ~ in the input path
         self.ensure_save_dir()
 
         # Verbose flag
@@ -243,6 +243,7 @@ class ArchiveDownloader:
         with the -continue and -N flag.
         If config_file is provided, will only download files with download set to Y.
         """
+        os.makedirs(self.save_dir, exist_ok=True)
         os.chdir(self.save_dir)
 
         if config_file != None:
@@ -256,10 +257,11 @@ class ArchiveDownloader:
         for ind, file in enumerate(self.download_link_list):
             file_full_link = self.download_url +'/'+ file
 
+            filename = unquote(file_full_link.split('/')[-1])
             if self.wget_verbose == 1:
-                os.system(f'wget -c -N -p {self.save_dir} --no-directories {file_full_link}')  # Continue & Timestampping
+                os.system(f'curl -L -C - -o {filename!r} {file_full_link!r}')
             else:
-                os.system(f'wget -nv -c -N -p {self.save_dir} --no-directories {file_full_link}')
+                os.system(f'curl -sS -L -C - -o {filename!r} {file_full_link!r}')
 
         check_set = self.compare_save_list_download_list()
 
@@ -343,8 +345,8 @@ def run_cli(argv=None):
             print(f'{index}. {filename}')
         return 0
 
-    if shutil.which('wget') is None:
-        print('wget is required and was not found on PATH.', file=sys.stderr)
+    if shutil.which('curl') is None:
+        print('curl is required and was not found on PATH.', file=sys.stderr)
         return 2
 
     if args.command == 'config':
