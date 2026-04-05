@@ -22,7 +22,7 @@ class ArchiveDownloader:
     """
     ArchiveDownloader class.
     """
-    def __init__(self, input_url, save_dir, wget_verbose=True):
+    def __init__(self, input_url, save_dir, curl_verbose=True):
         """
         Constructor. Take input URL and the directory path for saving the files
         """
@@ -34,10 +34,10 @@ class ArchiveDownloader:
         self.ensure_save_dir()
 
         # Verbose flag
-        if wget_verbose:
-            self.wget_verbose = 1  # Default
+        if curl_verbose:
+            self.curl_verbose = 1  # Default
         else:
-            self.wget_verbose = 0
+            self.curl_verbose = 0
 
         if self.check_download_availabilty():
             self.download_url = input_url.replace('/details/', '/download/')
@@ -239,8 +239,7 @@ class ArchiveDownloader:
 
     def get(self, config_file=None):
         """
-        Download the files from the list using wget. Let wget to handle all the incomplete files
-        with the -continue and -N flag.
+        Download the files from the list using curl with resume support.
         If config_file is provided, will only download files with download set to Y.
         """
         os.makedirs(self.save_dir, exist_ok=True)
@@ -258,7 +257,7 @@ class ArchiveDownloader:
             file_full_link = self.download_url +'/'+ file
 
             filename = unquote(file_full_link.split('/')[-1])
-            if self.wget_verbose == 1:
+            if self.curl_verbose == 1:
                 os.system(f'curl -L -C - -o {filename!r} {file_full_link!r}')
             else:
                 os.system(f'curl -sS -L -C - -o {filename!r} {file_full_link!r}')
@@ -329,7 +328,7 @@ def build_parser():
     download_parser.add_argument(
         '--quiet',
         action='store_true',
-        help='Use wget non-verbose mode',
+        help='Use curl non-verbose mode',
     )
 
     return parser
@@ -373,7 +372,7 @@ def run_cli(argv=None):
         return 0
 
     if args.command == 'download':
-        downloader = ArchiveDownloader(args.url, args.save_dir, wget_verbose=not args.quiet)
+        downloader = ArchiveDownloader(args.url, args.save_dir, curl_verbose=not args.quiet)
         if args.extension:
             downloader.select_extensions(args.extension)
             print(f'[ArchiveDownloader] Filtered to {downloader.count} files by extension.')
